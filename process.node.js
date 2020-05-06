@@ -256,3 +256,5 @@ class Readable extends EventEmitter {
 		}
 	}
 };
+
+module.exports = Readable
