@@ -1,6 +1,7 @@
 'use strict'
 
 const EventEmitter = require('events')
+const { Writable } = require('stream');
 
 class Readable extends EventEmitter {
 	constructor(options = null) {
@@ -62,7 +63,41 @@ class Readable extends EventEmitter {
 		}
 	}
 
-	listen(eventName, listener, emitter) {
+	_autoClose(cb = null) {
+		const callback = () => {
+			this._store['src'] = null;
+
+			console.log(JSON.stringify({
+				errno: 0,
+				message: 'DATA HAS STOPPED FLOWING'
+			}, null, 2));
+		}
+
+		if(this._options._emitClose) {
+			this.on('close', (typeof cb === 'function' && cb) || callback);
+			this.emit('close');
+		}
+	}
+
+	async _autoDestroy(cb = null) {
+		const callback = () => {
+			console.log(JSON.stringify({
+				errno: 0,
+				message: 'STREAM HAS CLOSED'
+			}, null, 2));
+		}
+
+		if(this._options._autoDestroy) {
+			await this._autoClose();
+
+			this.on('destroy', (typeof cb === 'function' && cb) || callback);
+			this.emit('destroy');
+		}
+		
+		return Promise.resolve(true);
+	}
+
+	_listen(eventName, listener, emitter) {
 		const isValidEventName = this._eventName.includes(eventName);
 
 		if(this._store['src'] && this._store.src === null) {
@@ -77,6 +112,8 @@ class Readable extends EventEmitter {
 					for await(let listenor of listeners) {
 						listenor()
 					}
+
+					listener()
 				});
 
 				try {
@@ -108,6 +145,13 @@ class Readable extends EventEmitter {
 		if(emitter) {
 			emitter();
 		}
+
+		if(this._options._autoDestroy === false && this._options._emitClose) {
+			throw new Error("ERROR: DESTROY EVENT IS TRIGGERED AFTER CLOSE EVENT")
+		}
+
+		this._autoClose();
+		this._autoDestroy().then((value) => value).catch(e => console.log(`e: ${e}`));
 
 		return true;
 	}
@@ -163,10 +207,52 @@ class Readable extends EventEmitter {
 	}
 
 	_push(data = null) {
+		if(this._options._objectMode === false) {
+			if(typeof data === "string" || data instanceof Buffer) {
+				break;
+			} else {
+				throw new Error("ERROR: DATA\'S TYPE IS NOT VALID");
+			}
+		} else {
+			break;
+		}
+
+		if(typeof data === 'string') {
+			const size = Buffer.from(data).length;
+			if(size > this._options._highWaterMark) {
+				throw new Error("ERROR: SIZE TOO LARGE");
+			}
+		}
+
+		if(data instanceof Buffer) {
+			if(data.length > this._options._highWaterMark) {
+				throw new Error("ERROR: SIZE TOO LARGE");
+			}
+		}
+
 		this._store[src] = data;
 	}
 
-	concurrency() {
-		
+	concurrency(...writer) {
+		const writers = Array.from(writer);
+		const helper = (writable) => writable.write(this._store['src'])
+
+		writers.forEach(writable => {
+			if(writable instanceof Writable) {}
+
+			throw new Error("ERROR: ONE OF THEM ISN\'T CORRECT!!");
+		});
+
+		let initial = writers.length;
+
+		if(this._store['src']) {
+			while(initial !== 0) {
+				var id = setInterval(() => {
+					writers[initial](); break;
+				}, 0)
+			}
+
+			clearInterval(id);
+		}
 	}
 };
