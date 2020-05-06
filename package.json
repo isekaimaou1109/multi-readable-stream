@@ -1,0 +1,28 @@
+{
+  "name": "multi-readable-stream",
+  "version": "1.0.0",
+  "description": "multi-read-side based-stream in nodejs",
+  "main": "process.node.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/isekaimaou1109/multi-readable-stream.git"
+  },
+  "keywords": [
+    "read",
+    "readable",
+    "stream",
+    "readable-stream",
+    "custom-read",
+    "custom-readable",
+    "multi-stream"
+  ],
+  "author": "isekaimaou1109",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/isekaimaou1109/multi-readable-stream/issues"
+  },
+  "homepage": "https://github.com/isekaimaou1109/multi-readable-stream#readme"
+}
