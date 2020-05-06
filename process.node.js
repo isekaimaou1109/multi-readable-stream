@@ -1,4 +1,5 @@
-const worker = require('worker_threads');
+'use strict'
+
 const EventEmitter = require('events')
 
 class Readable extends EventEmitter {
@@ -61,8 +62,32 @@ class Readable extends EventEmitter {
 		}
 	}
 
-	listen(eventName, listener, cb) {
+	listen(eventName, listener, emitter) {
 		const isValidEventName = this._eventName.includes(eventName);
+
+		if(this._store['src'] && this._store.src === null) {
+			this.on('end', () => {
+				process.exit(1)
+			})
+		}
+
+		if(this._store['src'] && this._store.src !== null && this._options._objectMode !== true) {
+			var wrappedListener = function(listener, listeners) {
+				let loop = (async function() {
+					for await(let listenor of listeners) {
+						listenor()
+					}
+				});
+
+				try {
+					loop()
+				} catch(e) {
+					throw new Error("ERROR: SOMETHING WRONG WHEN LOOP!");
+				}
+
+				return listener()
+			}
+		}
 
 		if(!this._store['listeners']) {
 			this._store['listeners'] = [];
@@ -76,9 +101,19 @@ class Readable extends EventEmitter {
 			throw new Error("ERROR: INVALID EVENT NAME!!")
 		}
 
-		this.on(eventName, )
+		const bind = wrappedListener.bind(null, listener, this._store['listeners']);
+
+		this.on(eventName, bind);
+
+		if(emitter) {
+			emitter();
+		}
 
 		return true;
+	}
+
+	emit(eventName) {
+		this.emit(eventName);
 	}
 
 	_addListener(eventName, listener, startStore, endStore) {
@@ -88,12 +123,12 @@ class Readable extends EventEmitter {
 			this._store['listeners'] = [];
 		}
 
-		if(typeof startStore === 'number' && startStore < 0 && startStore > this._store['listeners'].length) {
-
+		if(typeof startStore === 'number' && endStore < startStore || startStore < 0 || startStore > this._store['listeners'].length || endStore < 0 || endStore > this._store['listeners'].length) {
+			throw new Error("ERROR: INVALID INDEX");
 		}		
 
 		if(isValidEventName === false) {
-			throw new Error("ERROR: INVALID EVENT NAME!!")
+			throw new Error("ERROR: INVALID EVENT NAME!!");
 		}
 
 		if(this._store && this._store['listeners'] && this._store['listeners'] instanceof Array) {
@@ -102,7 +137,9 @@ class Readable extends EventEmitter {
 				listener, 
 				...this._store['listeners'].slice(startStore, endStore)
 			];
-		} 
+		}
+
+		return true;
 	}
 
 	_removeListener(eventName, removeStart, removeEnd) {
@@ -112,7 +149,7 @@ class Readable extends EventEmitter {
 			throw new Error("ERROR: YOU HAVEN\'T ADD LISTENER YET!!");
 		}
 
-		if(this._store['listeners'] && removeStart < 0 || removeStart > this._store['listeners'].length || removeEnd < 0 || removeStart > this._store['listeners'].length) {
+		if(this._store['listeners'] && removeEnd < removeStart|| removeStart < 0 || removeStart > this._store['listeners'].length || removeEnd < 0 || removeStart > this._store['listeners'].length) {
 			throw new Error("ERROR: INVALID INDEX");
 		}
 
@@ -121,15 +158,15 @@ class Readable extends EventEmitter {
 		}
 
 		if(this._store && this._store['listeners'] && this._store['listeners'] instanceof Array && this._store['listeners'].length >= 1) {
-			
+			this._store['listeners'].splice(removeStart, removeEnd);
 		} 
 	}
 
-	_read(size, encoding) {
-
+	_push(data = null) {
+		this._store[src] = data;
 	}
 
-	_push(data) {
-
+	concurrency() {
+		
 	}
 };
